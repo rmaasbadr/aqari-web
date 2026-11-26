@@ -1,0 +1,11 @@
+{
+  "name": "aqari-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "موقع عقاري للبحث عن العقارات وإدارة الإعلانات ومقارنة تقديرات التمويل",
+  "scripts": {
+    "start": "node script.js",
+    "check": "node --check script.js"
+  },
+  "engines": { "node": ">=20" }
+}

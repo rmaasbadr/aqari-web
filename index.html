@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>عقاري | Aqari</title>
+    <meta name="description" content="اكتشف عقارك القادم مع عقاري. تصفح الفلل والشقق والمشاريع وقارن خيارات التمويل في مكان واحد.">
+    <meta name="theme-color" content="#0756b4">
+    <link rel="icon" type="image/png" href="aqari-logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- رأس الصفحة -->
+    <header>
+        <a href="index.html" class="logo" aria-label="عقاري — الرئيسية"><img class="brand-image" src="aqari-logo.png" alt="عقاري AQARI" width="100" height="100"></a>
+        <nav aria-label="تصفح العقارات">
+            <button id="browsePropertiesButton" hidden>تصفح العقارات</button>
+            <button id="saleButton">للبيع</button>
+            <button id="rentButton">للإيجار</button>
+            <button id="projectsButton">المشاريع</button>
+        </nav>
+        <div class="header-buttons">
+            <button id="myListingsNav" class="outline" hidden>إعلاناتي</button>
+            <button id="favoritesButton" class="outline">♡ المفضلة</button>
+            <button id="addListingButton" class="primary">+ أضف عقارك</button>
+            <button id="accountButton">دخول / تسجيل</button>
+        </div>
+    </header>
+
+    <!-- صفحة المشتري -->
+    <main id="buyerPage">
+        <section class="search-section">
+            <div class="hero-layout">
+                <div class="hero-copy">
+                    <span class="eyebrow"><i></i> بداية جديدة، عنوان أجمل</span>
+                    <h1>كل حكاية حلوة،<br>تبدأ <span>ببيت.</span></h1>
+                    <p>اكتشف المكان اللي يشبهك. عقارات وخيارات تمويل،<br class="desktop-break"> في مكان واحد… عشان خطوتك الجاية تكون أسهل.</p>
+                    <a class="hero-link" href="#explore">خلّنا نلقى عقارك القادم <span>↙</span></a>
+                    <div class="hero-benefits"><span>✓ خيارات تناسبك</span><span>✓ مقارنة تمويل سهلة</span><span>✓ تجربة أبسط</span></div>
+                </div>
+                <div class="hero-visual">
+                    <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=85" alt="فيلا عصرية بحديقة ومسبح عند الغروب" fetchpriority="high">
+                    <span class="image-label">مساحة لحياة أجمل</span>
+                    <div class="hero-note"><span class="note-icon">⌂</span><div><strong>عقارك الجاي، وتمويله معاه.</strong><small>من أول بحث… إلى أول مفتاح</small></div><span class="note-arrow">↖</span></div>
+                </div>
+            </div>
+            <div class="search-heading"><strong>عن أي عقار تبحث؟</strong><span>كل الخيارات، أقرب مما تتخيل</span></div>
+            <form id="searchForm" class="search-form">
+                <input id="searchInput" placeholder="⌕  ابحث باسم الحي أو العقار…" aria-label="البحث باسم الحي أو العقار">
+                <select id="cityInput" aria-label="المدينة">
+                    <option value="">كل المدن</option>
+                    <option>الرياض</option><option>جدة</option><option>الدمام</option>
+                </select>
+                <select id="purposeInput" aria-label="نوع العرض">
+                    <option value="">للبيع والإيجار</option>
+                    <option value="Buy" selected>للبيع</option>
+                    <option value="Rent">للإيجار</option>
+                    <option value="Projects">مشاريع</option>
+                </select>
+                <button class="primary">ابحث عن عقارك ←</button>
+                <button type="button" id="filterButton">الفلاتر</button>
+            </form>
+            <div id="filters" class="filters" hidden>
+                <label>نوع العقار
+                    <select id="typeInput"><option value="">الكل</option><option value="Villa">فيلا</option><option value="Apartment">شقة</option><option value="Townhouse">تاون هاوس</option></select>
+                </label>
+                <label>أعلى سعر<input id="priceInput" type="number" min="0" placeholder="بدون حد"></label>
+                <label>أقل مساحة م²<input id="areaInput" type="number" min="0" placeholder="الكل"></label>
+                <label>غرف النوم<select id="bedroomsInput"><option value="0">الكل</option><option value="2">2 فأكثر</option><option value="3">3 فأكثر</option><option value="4">4 فأكثر</option></select></label>
+                <button id="resetButton" type="button">مسح الفلاتر</button>
+            </div>
+        </section>
+        <div class="categories" id="explore" aria-label="تصنيفات العقارات">
+            <button id="allCategory" data-property-type="" class="active">▦ الكل</button>
+            <button id="villaCategory" data-property-type="Villa">⌂ فلل</button>
+            <button id="apartmentCategory" data-property-type="Apartment">▥ شقق</button>
+            <button id="townhouseCategory" data-property-type="Townhouse">▤ تاون هاوس</button>
+        </div>
+        <section class="listings">
+            <div class="section-heading">
+                <div><h2 id="listTitle">عقارات للبيع والإيجار</h2><p id="resultCount"></p></div>
+                <div class="listing-tools"><div class="view-switch" aria-label="طريقة عرض العقارات"><button id="gridViewButton" class="active" aria-label="عرض شبكي" aria-pressed="true">▦</button><button id="listViewButton" aria-label="عرض قائمة" aria-pressed="false">☷</button></div><select id="sortInput" aria-label="ترتيب العقارات"><option value="new">الأحدث أولًا</option><option value="low">السعر: الأقل</option><option value="high">السعر: الأعلى</option><option value="area">المساحة: الأكبر</option></select></div>
+            </div>
+            <div class="city-shortcuts" aria-label="تصفح حسب المدينة"><span>وجهتك المفضلة</span><button data-city="" class="active">كل المدن</button><button data-city="الرياض">الرياض</button><button data-city="جدة">جدة</button><button data-city="الدمام">الدمام</button></div>
+            <div id="propertyList" class="property-list"></div>
+            <p id="emptyMessage" class="empty" hidden>ما فيه عقارات تطابق بحثك.</p>
+            <p class="results-note">وصلت لنهاية النتائج · جرّب مدينة أو تصنيف ثاني لاكتشاف المزيد</p>
+        </section>
+        <section class="finance-banner"><div class="finance-art" aria-hidden="true">⌂<span>٪</span></div><div><span class="eyebrow">خطوة أقرب لبيت العمر</span><h2>لقيت البيت؟ خلّنا نسهّل الباقي.</h2><p>قارن تقديرات التمويل من صفحة العقار، واعرف الخيارات المناسبة لك.</p></div><button id="exploreFinanceButton" class="primary">اكتشف خيارات التمويل ←</button></section>
+    </main>
+
+    <!-- صفحة البائع -->
+    <main id="sellerPage" hidden>
+        <section id="sellerOverview">
+        <div class="section-heading"><div><p>إعلاناتي</p><h1 id="welcomeText"></h1></div><button id="dashboardAddButton" class="primary">+ أضف عقار</button></div>
+        <div class="statistics"><div><strong id="totalAds">0</strong><span>إجمالي الإعلانات</span></div><div><strong id="activeAds">0</strong><span>إعلانات نشطة</span></div><div><strong id="pausedAds">0</strong><span>إعلانات موقوفة</span></div></div>
+        <p class="note">الإعلانات محفوظة على هذا المتصفح فقط، ولا تُنشر للآخرين.</p>
+        <div id="sellerList"></div>
+        </section>
+            <section id="propertyFormPanel" hidden>
+        <button id="backToListingsButton" class="outline" type="button">→ العودة لإعلاناتي</button>
+        <h2 id="adTitle">أضف عقارك</h2>
+        <form id="adForm" class="ad-form">
+                        <h3 class="wide form-section-title">العنوان ومواصفات العقار</h3>
+            <label class="wide">اسم الشارع<input id="adStreet" maxlength="100" placeholder="اسم الشارع (اختياري)"></label>
+            <label>عمر العقار بالسنوات<input id="adAge" type="number" min="0" max="150" required placeholder="0 للعقار الجديد"></label>
+            <label>واجهة العقار<select id="adDirection" required><option value="">اختر الواجهة</option><option>شمالية</option><option>جنوبية</option><option>شرقية</option><option>غربية</option><option>شمالية شرقية</option><option>شمالية غربية</option><option>جنوبية شرقية</option><option>جنوبية غربية</option></select></label>
+            <label>الدور<select id="adFloor"><option value="">غير محدد</option><option>أرضي</option><option>أول</option><option>ثاني</option><option>ثالث</option><option>رابع فأعلى</option><option>العقار كامل</option></select></label>
+            <label>التأثيث<select id="adFurnished"><option>غير مؤثث</option><option>مؤثث جزئيًا</option><option>مؤثث بالكامل</option></select></label>
+            <label>عرض الشارع بالمتر<input id="adStreetWidth" type="number" min="1" max="200" placeholder="اختياري"></label>
+            <label>رقم ترخيص الإعلان<input id="adPermit" maxlength="50" placeholder="إن وجد؛ لا يتم التحقق منه هنا"></label>
+            <fieldset class="wide property-features"><legend>مميزات العقار</legend><label><input id="adParking" type="checkbox"> موقف سيارة</label><label><input id="adElevator" type="checkbox"> مصعد</label><label><input id="adAC" type="checkbox"> مكيفات</label><label><input id="adKitchen" type="checkbox"> مطبخ راكب</label><label><input id="adGarden" type="checkbox"> حديقة / حوش</label><label><input id="adBalcony" type="checkbox"> شرفة</label></fieldset>
+
+            <label class="wide">عنوان الإعلان<input id="adName" required maxlength="100"></label>
+            <label>المدينة<select id="adCity"><option>الرياض</option><option>جدة</option><option>الدمام</option></select></label>
+            <label>الحي<input id="adDistrict" required maxlength="60"></label>
+            <label>نوع العقار<select id="adType"><option value="Villa">فيلا</option><option value="Apartment">شقة</option><option value="Townhouse">تاون هاوس</option></select></label>
+            <label>نوع العرض<select id="adPurpose"><option value="Buy">للبيع</option><option value="Rent">للإيجار السنوي</option></select></label>
+            <label>السعر بالريال<input id="adPrice" type="number" min="1" max="1000000000" required></label>
+            <label>المساحة م²<input id="adArea" type="number" min="1" max="1000000" required></label>
+            <label>غرف النوم<input id="adBeds" type="number" min="0" max="50" value="3" required></label>
+            <label>دورات المياه<input id="adBaths" type="number" min="0" max="50" value="3" required></label>
+            <label class="wide">الوصف<textarea id="adDescription" rows="3" maxlength="1000"></textarea></label>
+            <label class="wide">صورة العقار<input id="adPhoto" type="file" accept="image/jpeg,image/png,image/webp"></label>
+            <p class="note wide">الصورة اختيارية، بحد أقصى 2 ميجابايت. الحفظ على هذا الجهاز فقط.</p>
+            <button class="primary wide">حفظ الإعلان التجريبي</button>
+            <button id="cancelAdButton" class="outline wide" type="button">إلغاء والعودة لإعلاناتي</button>
+        </form>
+    </section>
+    </main>
+
+    <!-- نافذة الدخول واختيار نوع المستخدم -->
+    <dialog id="loginDialog">
+        <button class="close" data-close="loginDialog" aria-label="إغلاق">×</button>
+        <h2 id="registrationTitle">إنشاء حساب جديد</h2>
+        <p>اختيارك يحدد الصفحة اللي تفتح لك.</p>
+        <form id="loginForm">
+            <div class="role-options">
+                <label><input type="radio" name="role" value="buyer" checked><span><b>⌕</b><strong>مشتري</strong><small>تصفح العقارات وقارن التمويل</small></span></label>
+                <label><input type="radio" name="role" value="seller"><span><b>⌂</b><strong>بائع</strong><small>أضف عقارك وأدر إعلاناتك</small></span></label>
+            </div>
+            <h3 class="form-section-title">المعلومات الأساسية</h3>
+            <div class="profile-grid">
+                <label>الاسم الكامل <span class="required">*</span><input id="nameInput" maxlength="60" minlength="3" required autocomplete="name" placeholder="الاسم الكامل"></label>
+                <label>البريد الإلكتروني <span class="required">*</span><input id="emailInput" type="email" required maxlength="100" autocomplete="email" placeholder="name@example.com" dir="ltr"></label>
+                <label>رقم الجوال <span class="required">*</span><input id="phoneInput" type="tel" required autocomplete="tel" placeholder="05xxxxxxxx أو +9665xxxxxxxx" dir="ltr" maxlength="20"></label>
+                <label>المدينة <span class="required">*</span><select id="userCityInput" required><option value="">اختر المدينة</option><option>الرياض</option><option>جدة</option><option>الدمام</option><option>الخبر</option><option>مكة المكرمة</option><option>المدينة المنورة</option><option>مدينة أخرى</option></select></label>
+            </div>
+            <fieldset id="sellerFields" class="seller-fields" hidden disabled>
+                <legend>معلومات البائع</legend>
+                <div class="profile-grid">
+                    <label>صفة البائع <span class="required">*</span><select id="sellerTypeInput" required><option value="">اختر الصفة</option><option value="owner">مالك العقار</option><option value="broker">وسيط عقاري</option><option value="office">مكتب / شركة عقارية</option></select></label>
+                    <label>طريقة التواصل المفضلة <span class="required">*</span><select id="contactMethodInput" required><option value="">اختر الطريقة</option><option value="phone">اتصال هاتفي</option><option value="whatsapp">واتساب</option><option value="email">البريد الإلكتروني</option></select></label>
+                    <label>الحي / نطاق العمل<input id="sellerDistrictInput" maxlength="80" placeholder="مثال: شمال الرياض"></label>
+                    <label id="businessNameLabel" hidden>اسم المكتب / الشركة <span class="required">*</span><input id="businessNameInput" maxlength="100" disabled></label>
+                    <label id="licenseLabel" hidden>رقم ترخيص فال <span class="required">*</span><input id="licenseInput" maxlength="40" disabled placeholder="رقم الترخيص"></label>
+                    <label class="wide">نبذة عن البائع<textarea id="sellerBioInput" maxlength="500" rows="3" placeholder="نبذة مختصرة عنك أو عن المكتب (اختياري)"></textarea></label>
+                </div>
+                
+                            <div class="fal-verification">
+                    <strong>التحقق من ترخيص فال</strong>
+                    <p>إدخال الرقم لا يعني توثيقه. يُعرض الطلب بانتظار التحقق حتى يتم ربط الخدمة الرسمية والتحقق من صلاحية الترخيص وارتباطه بالبائع.</p>
+                    <div><button type="button" id="verifyLicenseButton" class="outline">التحقق من الترخيص</button><a href="https://rega.gov.sa/rega-services/real-estate-inquiries/استعلام-عن-رخص-فال/" target="_blank" rel="noopener noreferrer">فتح الاستعلام الرسمي ↗</a></div>
+                    <p id="licenseCheckMessage" role="status"></p>
+                </div>
+</fieldset>
+                        <div id="registrationPasswords" class="profile-grid password-grid">
+                <label>كلمة المرور <span class="required">*</span><div class="password-field"><input id="registerPassword" type="password" minlength="10" maxlength="128" required autocomplete="new-password"><button type="button" data-password="registerPassword">إظهار</button></div></label>
+                <label>تأكيد كلمة المرور <span class="required">*</span><div class="password-field"><input id="confirmPassword" type="password" minlength="10" maxlength="128" required autocomplete="new-password"><button type="button" data-password="confirmPassword">إظهار</button></div></label>
+                <p id="passwordStrength" class="note wide">10 أحرف على الأقل، مع حروف إنجليزية وأرقام.</p>
+                <label class="terms-label wide"><input id="termsInput" type="checkbox" required>أوافق على استخدام الحساب لهذه النسخة التجريبية، وعلى حفظ بيانات الحساب في خادم المشروع. الإعلانات تجريبية والتسعير التمويلي غير ملزم.</label>
+            </div>
+            <p id="registerInfo" class="note">الحساب وكلمة المرور محفوظان في الخادم. تأكيد البريد واستعادته يعملان بعد إعداد خدمة البريد. لا يوجد تحقق من ملكية الجوال.</p>
+            <p class="auth-switch" id="returnSignIn"><button type="button" id="returnSignInButton">عندك حساب؟ تسجيل الدخول</button></p>
+
+            <p id="profileError" class="form-error" role="alert" hidden></p>
+            
+            <button id="registrationSubmit" class="primary full">حفظ المعلومات والدخول</button>
+        </form>
+    </dialog>
+
+        <dialog id="signInDialog">
+        <button class="close" data-close="signInDialog" aria-label="إغلاق">×</button>
+        <div class="auth-brand"><img class="brand-image" src="aqari-logo.png" alt="عقاري AQARI" width="100" height="100"></div>
+        <h2>تسجيل الدخول</h2>
+        <p>أدخل بريدك وكلمة المرور للوصول إلى حسابك.</p>
+        <form id="signInForm" class="auth-form">
+            <label>البريد الإلكتروني<input id="signInEmail" type="email" required autocomplete="username" dir="ltr"></label>
+            <label>كلمة المرور<div class="password-field"><input id="signInPassword" type="password" required autocomplete="current-password" maxlength="128"><button type="button" data-password="signInPassword">إظهار</button></div></label>
+            <div class="auth-options"><label><input id="rememberInput" type="checkbox"> تذكرني</label><button id="forgotButton" type="button">نسيت كلمة المرور؟</button></div>
+            <p id="signInError" class="form-error" role="alert" hidden></p>
+            <button class="primary full">تسجيل الدخول</button>
+        </form>
+        <p class="auth-switch">ما عندك حساب؟ <button id="createAccountButton">إنشاء حساب جديد</button></p>
+    </dialog>
+
+    <dialog id="recoveryDialog">
+        <button class="close" data-close="recoveryDialog" aria-label="إغلاق">×</button>
+        <h2 id="recoveryTitle">استعادة كلمة المرور</h2>
+        <form id="recoveryForm" class="auth-form">
+            <label id="recoveryEmailLabel">البريد الإلكتروني<input id="recoveryEmail" type="email" required autocomplete="email" dir="ltr"></label>
+            <div id="resetFields" hidden><label>كلمة المرور الجديدة<input id="resetPassword" type="password" minlength="10" maxlength="128" autocomplete="new-password" disabled></label><label>تأكيد كلمة المرور<input id="resetConfirm" type="password" minlength="10" maxlength="128" autocomplete="new-password" disabled></label></div>
+            <p id="recoveryMessage" class="note" role="status"></p>
+            <button class="primary full">متابعة</button>
+        </form>
+    </dialog>
+
+    <main id="accountDialog" class="account-page" hidden>
+        <button id="backFromAccount" class="outline">→ العودة للعقارات</button>
+        <div class="account-heading"><div><p class="eyebrow">حسابي</p><h1 id="accountName"></h1><p id="accountRole"></p></div><button id="logoutButton" class="outline">تسجيل الخروج</button></div>
+        <section class="account-card">
+        <div class="section-heading"><div><h2>المعلومات الشخصية</h2><p>معلوماتك الأساسية وبيانات التواصل.</p></div><button id="editProfileButton" class="outline">تعديل البيانات</button></div>
+        <div id="profileSummary" class="profile-summary"></div>
+        <form id="personalInfoForm" hidden>
+            <div class="profile-grid">
+                <label>الاسم الكامل<input id="profileName" required minlength="3" maxlength="60" autocomplete="name"></label>
+                <label>البريد الإلكتروني<input id="profileEmail" type="email" readonly dir="ltr"><small>البريد الإلكتروني مرتبط بتسجيل الدخول ولا يمكن تغييره هنا.</small></label>
+                <label>رقم الجوال<input id="profilePhone" type="tel" required maxlength="20" autocomplete="tel" dir="ltr"></label>
+                <label>المدينة<select id="profileCity" required><option>الرياض</option><option>جدة</option><option>الدمام</option><option>الخبر</option><option>مكة المكرمة</option><option>المدينة المنورة</option><option>مدينة أخرى</option></select></label>
+            </div>
+            <p id="personalInfoError" class="form-error" role="alert" hidden></p>
+            <div class="account-actions"><button type="submit" class="primary">حفظ التغييرات</button><button id="cancelPersonalEdit" type="button" class="outline">إلغاء</button></div>
+        </form>
+        </section>
+        <section class="account-card"><h2>حالة الحساب</h2>
+                <div class="account-status">
+            <p id="emailStatus"></p>
+            <button id="resendEmailButton" class="outline">إعادة إرسال تأكيد البريد</button>
+            <p id="accountLicenseStatus"></p>
+        </div>
+
+        </section>
+        <section id="sellerAccountSection" class="account-card">
+        <h2>بيانات البائع</h2><p>حدّث صفتك كبائع ومعلومات التواصل الخاصة بعرض عقاراتك.</p>
+        <button id="editSellerInfoButton" class="outline">تعديل بيانات البائع</button>
+        </section>
+        <section id="startSellingSection" class="account-card selling-invite"><h2>عندك عقار حاب تعرضه؟</h2><p>فعّل خدمات البائع بإكمال بياناتك، وبعدها تقدر تضيف عقاراتك وتدير إعلاناتك. وتقدر تستمر بتصفح العقارات وحفظ المفضلة.</p><button id="switchButton" class="primary">ابدأ البيع ←</button></section>
+    </main>
+
+    <!-- إضافة عقار أو تعديله -->
+
+
+    <!-- تفاصيل العقار وخيارات التمويل -->
+    <dialog id="detailsDialog" class="details-dialog">
+        <button class="close" data-close="detailsDialog" aria-label="إغلاق">×</button>
+        <img id="detailsImage" class="details-image" alt="">
+        <div class="details-heading"><div><span id="detailsPurpose" class="badge"></span><h2 id="detailsName"></h2><p id="detailsCity"></p></div><strong id="detailsPrice"></strong></div>
+        <div id="detailsFacts" class="facts"></div>
+        <h3>تفاصيل العقار</h3><p id="detailsDescription" class="description"></p><p id="detailsExtra" hidden></p>
+        <section id="financeSection">
+            <h3>▥ خيارات التمويل لهذا العقار</h3>
+            <p>اختر البنك لعرض التفاصيل والتواصل معه.</p>
+            <div class="finance-inputs">
+                <label>الدفعة الأولى (%)<input id="downInput" type="number" min="10" max="95" value="10"></label>
+                <label>مدة المحاكاة<select id="termInput"><option value="source">مدة المثال لكل بنك</option><option value="15">15 سنة للجميع</option><option value="20">20 سنة للجميع</option><option value="25">25 سنة للجميع</option></select></label>
+                <button id="calculateButton" class="outline">تحديث التقدير</button>
+            </div>
+            <p class="note">الأرقام محاكاة باستخدام APR من أمثلة منشورة، وليست عرضًا أو موافقة تمويل. تغيير المدة أو المبلغ قد يغيّر التسعير الفعلي.</p>
+            <div id="bankList"></div>
+        </section>
+    </dialog>
+
+    <footer><div><img class="brand-image" src="aqari-logo.png" alt="عقاري AQARI" width="100" height="100"><p>كل حكاية حلوة، تبدأ ببيت.</p></div><span>عقارات وخيارات تمويل في مكان واحد.</span><small>نسخة تجريبية · العقارات والأسعار للتوضيح<br>© <span id="copyrightYear">2026</span> عقاري</small></footer>
+    <p id="message" role="status" hidden></p>
+    <script src="script.js"></script>
+</body>
+</html>
