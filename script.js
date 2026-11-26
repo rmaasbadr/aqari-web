@@ -728,6 +728,10 @@ let editingProfile = false;
 let resetToken = new URLSearchParams(window.location.search).get("reset");
 
 async function apiRequest(url, method, data) {
+    if (window.location.hostname.endsWith(".github.io")) {
+        if (url === "/api/me") return { user: null };
+        throw new Error("خدمات الحسابات غير متاحة في نسخة العرض الحالية. يمكنك تصفح العقارات وحفظ المفضلة ومقارنة تقديرات التمويل.");
+    }
     // fetch يرسل طلبًا للخادم، وawait ينتظر الرد قبل تنفيذ السطر التالي.
     if (window.location.protocol === "file:") throw new Error("شغّل المشروع باستخدام node script.js وافتح http://localhost:3000. تسجيل الحساب لا يعمل بفتح ملف HTML مباشرة.");
     const options = { method: method, credentials: "same-origin" };
@@ -830,6 +834,10 @@ getElement("signInForm").addEventListener("submit", async function (event) {
 });
 
 getElement("accountButton").addEventListener("click", function () {
+    if (window.location.hostname.endsWith(".github.io")) {
+        showMessage("هذه نسخة عرض عامة. تسجيل الدخول وإضافة الإعلانات يحتاجان ربط خادم الحسابات.");
+        return;
+    }
     if (!currentUser) {
         getElement("signInError").hidden = true;
         getElement("signInDialog").showModal();
