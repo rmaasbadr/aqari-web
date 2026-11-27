@@ -95,7 +95,7 @@
         <section id="sellerOverview">
         <div class="section-heading"><div><p>إعلاناتي</p><h1 id="welcomeText"></h1></div><button id="dashboardAddButton" class="primary">+ أضف عقار</button></div>
         <div class="statistics"><div><strong id="totalAds">0</strong><span>إجمالي الإعلانات</span></div><div><strong id="activeAds">0</strong><span>إعلانات نشطة</span></div><div><strong id="pausedAds">0</strong><span>إعلانات موقوفة</span></div></div>
-        <p class="note">الإعلانات محفوظة على هذا المتصفح فقط، ولا تُنشر للآخرين.</p>
+        <p id="listingStorageNote" class="note">الإعلانات محفوظة على هذا المتصفح فقط، ولا تُنشر للآخرين.</p>
         <div id="sellerList"></div>
         </section>
             <section id="propertyFormPanel" hidden>
@@ -123,7 +123,7 @@
             <label>دورات المياه<input id="adBaths" type="number" min="0" max="50" value="3" required></label>
             <label class="wide">الوصف<textarea id="adDescription" rows="3" maxlength="1000"></textarea></label>
             <label class="wide">صورة العقار<input id="adPhoto" type="file" accept="image/jpeg,image/png,image/webp"></label>
-            <p class="note wide">الصورة اختيارية، بحد أقصى 2 ميجابايت. الحفظ على هذا الجهاز فقط.</p>
+            <p class="note wide">الصورة اختيارية، بحد أقصى 2 ميجابايت.</p>
             <button class="primary wide">حفظ الإعلان التجريبي</button>
             <button id="cancelAdButton" class="outline wide" type="button">إلغاء والعودة لإعلاناتي</button>
         </form>
@@ -263,6 +263,7 @@
 
     <footer><div><img class="brand-image" src="aqari-logo.png" alt="عقاري AQARI" width="100" height="100"><p>كل حكاية حلوة، تبدأ ببيت.</p></div><span>عقارات وخيارات تمويل في مكان واحد.</span><small>نسخة تجريبية · العقارات والأسعار للتوضيح<br>© <span id="copyrightYear">2026</span> عقاري</small></footer>
     <p id="message" role="status" hidden></p>
+    <script src="config.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

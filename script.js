@@ -10,19 +10,15 @@ const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
+const bcrypt = require("bcryptjs");
+const { pool, readUsers, saveUser, listProperties, saveProperty } = require("./db.js");
 
-const folder = path.join(__dirname, "private-data");
-const usersFile = path.join(folder, "users.json");
 // كائنات عادية لحفظ الجلسات وعدد المحاولات أثناء تشغيل الخادم.
 const sessions = {};
 const attempts = {};
-const publicFiles = ["index.html", "style.css", "script.js", "aqari-logo.png"];
+const publicFiles = ["index.html", "style.css", "script.js", "aqari-logo.png", "config.js"];
 const officialFalUrl = "https://rega.gov.sa/rega-services/real-estate-inquiries/استعلام-عن-رخص-فال/";
 
-function readUsers() {
-    if (!fs.existsSync(usersFile)) return [];
-    return JSON.parse(fs.readFileSync(usersFile, "utf8"));
-}
 
 // البحث بحلقة for بدل تكرار عمليات البحث المختصرة داخل الطلبات.
 function findUserByEmail(users, email) {
@@ -48,20 +44,12 @@ function findUserByToken(users, token, type) {
     return null;
 }
 
-function saveUsers(users) {
-    fs.mkdirSync(folder, { recursive: true });
-    fs.writeFileSync(usersFile + ".tmp", JSON.stringify(users, null, 2));
-    fs.renameSync(usersFile + ".tmp", usersFile);
+async function passwordHash(password) {
+    return bcrypt.hash(password, 12);
 }
 
-function passwordHash(password, salt) {
-    // نستخدم دالة جاهزة من Node لحماية كلمة المرور، ولا نكتب خوارزمية خاصة.
-    return crypto.scryptSync(password, salt, 64).toString("hex");
-}
-
-function passwordMatches(password, user) {
-    const hash = Buffer.from(passwordHash(password, user.salt), "hex");
-    return crypto.timingSafeEqual(hash, Buffer.from(user.passwordHash, "hex"));
+async function passwordMatches(password, user) {
+    return bcrypt.compare(password, user.passwordHash.replace(/^\$2y\$/, "$2b$"));
 }
 
 function tokenHash(token) {
@@ -85,7 +73,7 @@ async function readBody(req) {
     let text = "";
     for await (const chunk of req) {
         text += chunk;
-        if (Buffer.byteLength(text) > 20000) throw new Error("الطلب أكبر من المسموح.");
+        if (Buffer.byteLength(text) > 3000000) throw new Error("الطلب أكبر من المسموح.");
     }
     return JSON.parse(text || "{}");
 }
@@ -107,7 +95,7 @@ function startSession(res, user, remember) {
     const token = crypto.randomBytes(32).toString("hex");
     const seconds = remember ? 30 * 86400 : 8 * 3600;
     sessions[tokenHash(token)] = { userId: user.id, expires: Date.now() + seconds * 1000 };
-    const secure = process.env.COOKIE_SECURE === "true" ? "; Secure" : "";
+    const secure = process.env.COOKIE_SECURE === "true" || process.env.NODE_ENV === "production" ? "; Secure" : "";
     res.setHeader("Set-Cookie", "aqari_session=" + token + "; HttpOnly; SameSite=Strict; Path=/; Max-Age=" + seconds + secure);
 }
 
@@ -173,6 +161,10 @@ async function handleRequest(req, res) {
     if (!route.startsWith("/api/")) {
         if (req.method !== "GET") return reply(res, 405, { error: "الطريقة غير متاحة." });
         const file = route === "/" ? "index.html" : route.slice(1);
+        if (file === "config.js") {
+            res.writeHead(200, { "Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "no-store" });
+            return res.end('window.AQARI_API_MODE = "mysql";');
+        }
         if (!publicFiles.includes(file)) return reply(res, 404, { error: "الصفحة غير موجودة." });
         const types = { html: "text/html; charset=utf-8", css: "text/css; charset=utf-8", js: "text/javascript; charset=utf-8", png: "image/png" };
         res.writeHead(200, { "Content-Type": types[file.split(".").pop()], "Cache-Control": "no-store" });
@@ -181,7 +173,7 @@ async function handleRequest(req, res) {
     try {
         if (req.method === "POST" || req.method === "PUT") {
             if (!(req.headers["content-type"] || "").startsWith("application/json")) return reply(res, 415, { error: "نوع الطلب غير صحيح." });
-            const expected = new URL(process.env.APP_URL || "http://" + req.headers.host).origin;
+            const expected = new URL(process.env.APP_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? "https://" + process.env.RAILWAY_PUBLIC_DOMAIN : "http://" + req.headers.host)).origin;
             if (req.headers.origin && req.headers.origin !== expected) return reply(res, 403, { error: "مصدر الطلب غير مسموح." });
             const key = req.socket.remoteAddress + ":" + route;
             let rate = attempts[key];
@@ -190,11 +182,16 @@ async function handleRequest(req, res) {
             attempts[key] = rate;
             if (rate.count > 30) return reply(res, 429, { error: "محاولات كثيرة. جرّب بعد 15 دقيقة." });
         }
-        const users = readUsers();
+        if (route === "/api/health" && req.method === "GET") {
+            await pool.execute("SELECT 1");
+            return reply(res, 200, { ok: true, backend: "Node.js + MAMP MySQL" });
+        }
+        const users = await readUsers();
         const session = getSession(req);
         let user = null;
         if (session) user = findUserById(users, session.userId);
         if (route === "/api/me" && req.method === "GET") return reply(res, 200, { user: user ? publicUser(user) : null });
+        if (route === "/api/properties" && req.method === "GET") return reply(res, 200, { properties: await listProperties(user) });
         const data = await readBody(req);
         if (route === "/api/register" && req.method === "POST") {
             const error = validateProfile(data);
@@ -205,10 +202,10 @@ async function handleRequest(req, res) {
             if (findUserByEmail(users, data.email.trim().toLowerCase())) return reply(res, 409, { error: "تعذر إنشاء الحساب بهذا البريد؛ جرّب تسجيل الدخول أو استعادة كلمة المرور." });
             const account = { id: crypto.randomUUID(), salt: crypto.randomBytes(16).toString("hex"), emailVerified: false };
             setProfile(account, data);
-            account.passwordHash = passwordHash(data.password, account.salt);
+            account.passwordHash = await passwordHash(data.password);
             const sent = await verificationEmail(account);
             users.push(account);
-            saveUsers(users);
+            await saveUser(account, true);
             startSession(res, account, false);
             return reply(res, 201, { user: publicUser(account), message: sent ? "تم إنشاء الحساب وإرسال رابط تأكيد البريد." : "تم إنشاء الحساب. إرسال تأكيد البريد غير متاح حاليًا؛ إعداد البريد لم يكتمل أو تعذر الإرسال." });
         }
@@ -216,8 +213,8 @@ async function handleRequest(req, res) {
             if (typeof data.email !== "string" || typeof data.password !== "string" || data.password.length > 128) return reply(res, 400, { error: "أدخل البريد وكلمة المرور." });
             const account = findUserByEmail(users, data.email.trim().toLowerCase());
             // A dummy hash prevents the fast path from revealing unknown emails.
-            const candidate = account || { salt: "00000000000000000000000000000000", passwordHash: "0".repeat(128) };
-            if (!passwordMatches(data.password, candidate) || !account) return reply(res, 401, { error: "البريد أو كلمة المرور غير صحيحة." });
+            const candidate = account || { passwordHash: "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxefPj8e3MY9LhmUu.QpR2m0QvK" };
+            if (!await passwordMatches(data.password, candidate) || !account) return reply(res, 401, { error: "البريد أو كلمة المرور غير صحيحة." });
             startSession(res, account, data.remember === true);
             return reply(res, 200, { user: publicUser(account) });
         }
@@ -235,7 +232,7 @@ async function handleRequest(req, res) {
                 account.resetExpires = Date.now() + 30 * 60000;
                 const sent = await sendEmail(account.email, "استعادة كلمة المرور — عقاري", "الرابط صالح 30 دقيقة: " + process.env.APP_URL + "/?reset=" + token);
                 if (!sent) return reply(res, 503, { error: "تعذر إرسال رسالة الاستعادة. جرّب لاحقًا." });
-                saveUsers(users);
+                await saveUser(account);
             }
             return reply(res, 200, { message: "إذا كان البريد مسجلًا، سيصله رابط الاستعادة." });
         }
@@ -244,13 +241,13 @@ async function handleRequest(req, res) {
             if (!account) return reply(res, 400, { error: "رابط الاستعادة غير صالح أو انتهت صلاحيته." });
             if (typeof data.password !== "string" || data.password.length < 10 || data.password.length > 128 || !/[A-Za-z]/.test(data.password) || !/[0-9]/.test(data.password) || data.password !== data.confirmPassword) return reply(res, 400, { error: "أدخل كلمة مرور قوية ومتطابقة مع التأكيد." });
             account.salt = crypto.randomBytes(16).toString("hex");
-            account.passwordHash = passwordHash(data.password, account.salt);
+            account.passwordHash = await passwordHash(data.password);
             delete account.resetHash;
             delete account.resetExpires;
             for (const key in sessions) {
                 if (sessions[key].userId === account.id) delete sessions[key];
             }
-            saveUsers(users);
+            await saveUser(account);
             return reply(res, 200, { message: "تم تغيير كلمة المرور. سجل دخولك من جديد." });
         }
         if (route === "/api/verify-email" && req.method === "POST") {
@@ -259,21 +256,22 @@ async function handleRequest(req, res) {
             account.emailVerified = true;
             delete account.verifyHash;
             delete account.verifyExpires;
-            saveUsers(users);
+            await saveUser(account);
             return reply(res, 200, { message: "تم تأكيد البريد الإلكتروني." });
         }
         if (!user) return reply(res, 401, { error: "سجل دخولك أولًا." });
+        if (route === "/api/properties" && req.method === "POST") return reply(res, 200, { property: await saveProperty(user, data) });
         if (route === "/api/profile" && req.method === "PUT") {
             data.email = user.email; // Email changes require a separate verified flow.
             const error = validateProfile(data);
             if (error) return reply(res, 400, { error: error });
             setProfile(user, data);
-            saveUsers(users);
+            await saveUser(user);
             return reply(res, 200, { user: publicUser(user) });
         }
         if (route === "/api/resend-email" && req.method === "POST") {
             const sent = await verificationEmail(user);
-            saveUsers(users);
+            await saveUser(user);
             return reply(res, sent ? 200 : 503, sent ? { message: "أرسل رابط التأكيد." } : { error: "خدمة البريد غير مهيأة أو تعذر الإرسال." });
         }
         if (route === "/api/license/verify" && req.method === "POST") {
@@ -283,14 +281,16 @@ async function handleRequest(req, res) {
         }
         return reply(res, 404, { error: "الخدمة غير موجودة." });
     } catch (error) {
-        return reply(res, 400, { error: "تعذر تنفيذ الطلب. تحقق من البيانات وحاول مرة أخرى." });
+        if (error.code === "ER_DUP_ENTRY") return reply(res,409,{ error: "البريد مسجل بالفعل. جرّب تسجيل الدخول." });
+        if (["ECONNREFUSED","ER_ACCESS_DENIED_ERROR","ER_BAD_DB_ERROR"].includes(error.code)) return reply(res,503,{ error: "تعذر الاتصال بقاعدة البيانات. شغّل MySQL من MAMP وتأكد من إعداد عقاري." });
+        return reply(res, error.status || 400, { error: error.status ? error.message : "تعذر تنفيذ الطلب. تحقق من البيانات وحاول مرة أخرى." });
     }
 }
 
 if (require.main === module) {
     const server = http.createServer(handleRequest);
     const port = Number(process.env.PORT || 3000);
-    server.listen(port, "127.0.0.1", function () { console.log("Aqari: http://localhost:" + port); });
+    server.listen(port, process.env.HOST || "127.0.0.1", function () { console.log("Aqari: http://localhost:" + port); });
 }
 module.exports = { handleRequest, calculateHash: passwordHash };
 
@@ -498,7 +498,9 @@ const banks = [
 // متغيرات نحتاجها أثناء استخدام الموقع.
 let currentUser = null;
 let savedProperties = readStorage("aqari-saved", []);
-let sellerProperties = readStorage("aqari-student-ads", []);
+const phpBackend = window.AQARI_API_MODE === "php" && !window.location.hostname.endsWith(".github.io");
+const databaseBackend = phpBackend || window.AQARI_API_MODE === "mysql";
+let sellerProperties = databaseBackend ? [] : readStorage("aqari-student-ads", []);
 let favoritesOnly = false;
 let editingId = null;
 let currentProperty = null;
@@ -740,8 +742,10 @@ async function apiRequest(url, method, data) {
         options.body = JSON.stringify(data);
     }
     let response;
-    try { response = await fetch(url, options); }
+    const endpoint = phpBackend ? "api.php?route=" + encodeURIComponent(url.replace(/^\/api\//, "")) : url;
+    try { response = await fetch(endpoint, options); }
     catch (error) { throw new Error("تعذر الاتصال بخادم المشروع. تأكد من تشغيل node script.js."); }
+    if (!(response.headers.get("Content-Type") || "").includes("application/json")) throw new Error("خادم الحسابات غير جاهز. افتح الموقع من خادم MAMP وتأكد من تشغيل PHP وMySQL.");
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "تعذر تنفيذ الطلب.");
     return result;
@@ -802,6 +806,7 @@ getElement("loginForm").addEventListener("submit", async function (event) {
         getElement("registerPassword").value = "";
         getElement("confirmPassword").value = "";
         getElement("loginDialog").close();
+        if (databaseBackend) await loadServerProperties();
         updateUserPage();
         showMessage(result.message || "تم حفظ معلومات الحساب.");
     } catch (error) {
@@ -825,6 +830,7 @@ getElement("signInForm").addEventListener("submit", async function (event) {
         currentUser = result.user;
         getElement("signInPassword").value = "";
         getElement("signInDialog").close();
+        if (databaseBackend) await loadServerProperties();
         updateUserPage();
     } catch (error) {
         getElement("signInError").textContent = error.message;
@@ -864,6 +870,7 @@ getElement("logoutButton").addEventListener("click", async function () {
     try {
         await apiRequest("/api/logout", "POST", {});
         currentUser = null;
+        if (databaseBackend) await loadServerProperties();
         getElement("accountDialog").hidden = true;
         updateUserPage();
     } catch (error) { showMessage(error.message); }
@@ -946,6 +953,7 @@ async function loadSession() {
         }
         const result = await apiRequest("/api/me", "GET");
         currentUser = result.user;
+        if (databaseBackend) await loadServerProperties();
         updateUserPage();
         if (resetToken) {
             getElement("recoveryTitle").textContent = "تعيين كلمة مرور جديدة";
@@ -1066,11 +1074,15 @@ getElement("adForm").addEventListener("submit", function (event) {
     }
 });
 
-function saveAd(photo) {
-    let property = editingId ? findProperty(editingId) : null;
+async function saveAd(photo) {
+    const submitButton = getElement("adForm").querySelector("button.primary");
+    if (submitButton.disabled) return;
+    submitButton.disabled = true;
+    try {
+    const existing = editingId ? findProperty(editingId) : null;
+    let property = existing ? { ...existing } : null;
     if (!property) {
         property = { id: Date.now(), owner: true, ownerId: currentUser.id, paused: false, img: "photo-1600596542815-ffad4c1539a9" };
-        properties.push(property);
     }
     property.ar = getElement("adName").value.trim();
     property.name = property.ar;
@@ -1099,9 +1111,27 @@ function saveAd(photo) {
     if (needsVerification) property.paused = true;
     property.draft = needsVerification;
     if (photo) property.photo = photo;
-    saveSellerProperties();
+    if (databaseBackend) {
+        await apiRequest("/api/properties", "POST", { id: editingId || null, property: property });
+        await loadServerProperties();
+    } else {
+        if (existing) Object.assign(existing, property);
+        else properties.push(property);
+        saveSellerProperties();
+    }
     getElement("propertyFormPanel").hidden = true;
     showSellerPage();
+    showMessage(databaseBackend ? "تم حفظ العقار على الخادم." : "تم حفظ الإعلان التجريبي.");
+    } catch (error) { showMessage(error.message); }
+    finally { submitButton.disabled = false; }
+}
+
+async function loadServerProperties() {
+    const result = await apiRequest("/api/properties", "GET");
+    for (let i = properties.length - 1; i >= 0; i--) {
+        if (properties[i].owner) properties.splice(i, 1);
+    }
+    properties.push(...result.properties);
 }
 
 // تفاصيل العقار تظهر في نافذة واحدة، وتحتها خيارات البنوك.
@@ -1265,7 +1295,7 @@ getElement("exploreFinanceButton").addEventListener("click", function () {
 getElement("copyrightYear").textContent = new Date().getFullYear();
 
 // البطاقات تُنشأ بالجافاسكربت، لذلك نتابع أزرارها من الصفحة.
-document.addEventListener("click", function (event) {
+document.addEventListener("click", async function (event) {
     const button = event.target.closest("button");
     if (!button) return;
     if (button.dataset.close) getElement(button.dataset.close).close();
@@ -1281,9 +1311,18 @@ document.addEventListener("click", function (event) {
                     showMessage("بيانات العقار محفوظة كمسودة. التفعيل يحتاج التحقق الرسمي من ترخيص فال.");
                     return;
                 }
-                property.paused = !property.paused;
-                saveSellerProperties();
-                showSellerPage();
+                try {
+                    if (databaseBackend) {
+                        button.disabled = true;
+                        await apiRequest("/api/properties", "POST", { id: property.id, property: { ...property, paused: !property.paused } });
+                        await loadServerProperties();
+                    } else {
+                        property.paused = !property.paused;
+                        saveSellerProperties();
+                    }
+                    showSellerPage();
+                } catch (error) { showMessage(error.message); }
+                finally { button.disabled = false; }
             }
         }
     }
@@ -1445,6 +1484,7 @@ function showExtraPropertyDetails(property) {
 }
 
 // بدء تشغيل الموقع.
+if (databaseBackend) getElement("listingStorageNote").textContent = "إعلانات المالك النشطة تظهر لجميع الزوار. إعلانات الوسطاء والمكاتب تبقى مسودات حتى ربط التحقق الرسمي من فال.";
 updateSellerFields();
 updateUserPage();
 loadSession();

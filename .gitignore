@@ -1,4 +1,7 @@
 private-data/
+config.local.php
+deploy-mamp/
+tmp/
 .env
 .env.*
 !.env.example
